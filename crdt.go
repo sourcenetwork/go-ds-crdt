@@ -20,6 +20,7 @@ package crdt
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -747,7 +748,7 @@ func (b *batch) Commit() error {
 }
 
 // PrintDAG pretty prints the current Merkle-DAG using the given printFunc
-func (store *Datastore) PrintDAG() error {
+func (store *Datastore) PrintDAG(w io.Writer) error {
 	heads, _, err := store.heads.List()
 	if err != nil {
 		return err
@@ -756,7 +757,7 @@ func (store *Datastore) PrintDAG() error {
 	ng := &crdtNodeGetter{NodeGetter: store.dagSyncer}
 
 	for _, h := range heads {
-		err := store.printDAGRec(h, 0, ng)
+		err := store.printDAGRec(w, h, 0, ng)
 		if err != nil {
 			return err
 		}
@@ -764,7 +765,7 @@ func (store *Datastore) PrintDAG() error {
 	return nil
 }
 
-func (store *Datastore) printDAGRec(from cid.Cid, depth uint64, ng *crdtNodeGetter) error {
+func (store *Datastore) printDAGRec(w io.Writer, from cid.Cid, depth uint64, ng *crdtNodeGetter) error {
 	nd, delta, err := ng.GetDelta(context.Background(), from)
 	if err != nil {
 		return err
@@ -789,9 +790,15 @@ func (store *Datastore) printDAGRec(from cid.Cid, depth uint64, ng *crdtNodeGett
 		line += fmt.Sprintf("%s,", l.Cid.String()[0:4])
 	}
 	line += "}:"
-	fmt.Println(line)
+	// fmt.Println(line)
+	// write line to buffer
+	_, err = fmt.Fprintln(w, line)
+	if err != nil {
+		return err
+	}
+
 	for _, l := range nd.Links() {
-		store.printDAGRec(l.Cid, depth+1, ng)
+		store.printDAGRec(w, l.Cid, depth+1, ng)
 	}
 	return nil
 }
