@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"time"
 
@@ -747,8 +748,8 @@ func (b *batch) Commit() error {
 	return b.store.publishDelta()
 }
 
-// PrintDAG pretty prints the current Merkle-DAG using the given printFunc
-func (store *Datastore) PrintDAG(w io.Writer) error {
+// DAGPrinter writes a stringified representation of the DAG to the given io.Writer
+func (store *Datastore) DAGPrinter(w io.Writer) error {
 	heads, _, err := store.heads.List()
 	if err != nil {
 		return err
@@ -763,6 +764,11 @@ func (store *Datastore) PrintDAG(w io.Writer) error {
 		}
 	}
 	return nil
+}
+
+// PrintDAG pretty prints the current Merkle-DAG using the given printFunc
+func (store *Datastore) PrintDAG() error {
+	return store.DAGPrinter(os.Stdout)
 }
 
 func (store *Datastore) printDAGRec(w io.Writer, from cid.Cid, depth uint64, ng *crdtNodeGetter) error {
